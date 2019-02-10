@@ -1,24 +1,57 @@
 #!/usr/bin/env python3
-import binascii
-from sha1 import Sha1Hash
+import sha1
 
+# Original message and MAC
 msg = [0x4e, 0x6f, 0x20, 0x6f, 0x6e, 0x65, 0x20, 0x68, 0x61, 0x73, 0x20, 0x63, 0x6f, 0x6d, 0x70, 0x6c,
        0x65, 0x74, 0x65, 0x64, 0x20, 0x6c, 0x61, 0x62, 0x20, 0x32, 0x20, 0x73, 0x6f, 0x20, 0x67, 0x69,
        0x76, 0x65, 0x20, 0x74, 0x68, 0x65, 0x6d, 0x20, 0x61, 0x6c, 0x6c, 0x20, 0x61, 0x20, 0x30]
 msg_mac = [0xf4b645e8,
-       0x9faaec2f,
-       0xf8e443c5,
-       0x95009c16,
-       0xdbdfba4b]
+           0x9faaec2f,
+           0xf8e443c5,
+           0x95009c16,
+           0xdbdfba4b]
 
-test_mac = [0x91216ef0,
-            0x0d38c421,
-            0xfe0dfb9c,
-            0x2d511347,
-            0x6b78cd88]
+# Extenstion to add to original message
+ext = [0x2c, 0x20, 0x65, 0x78, 0x63, 0x65, 0x70, 0x74,
+       0x20, 0x5a, 0x61, 0x63, 0x6b, 0x2e, 0x20, 0x48,
+       0x65, 0x20, 0x69, 0x73, 0x20, 0x6f, 0x6e, 0x65,
+       0x20, 0x63, 0x6f, 0x6f, 0x6c, 0x20, 0x64, 0x75,
+       0x64, 0x65, 0x2e]
+
+# Create chunk to run SHA-1 process_chunk on
+chunk = []
+chunk += ext
+chunk += [0x80]
+for i in range(20 + 6):
+    chunk += [0x00]
+newlen = 1024 + (len(ext) * 8)
+chunk += [0x05]
+chunk += [0x18]
+chunk = bytes(chunk)
+
+# Process chunk with the original MAC and generated chunk to get the modified message MAC
+msg_mac[0], msg_mac[1], msg_mac[2], msg_mac[3], msg_mac[4] = sha1._process_chunk(chunk, msg_mac[0], msg_mac[1], msg_mac[2], msg_mac[3], msg_mac[4])
+mod_mac = ""
+for row in msg_mac:
+    mod_mac += format(row, 'x')
+
+# Generate full extended message
+pad = [0x80]
+for i in range(56):
+    pad += [0x00]
+
+# Modified message = Original message | padding | size of old message in bits | extension string
+mod_msg = msg + pad + [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xf8] + ext
 
 
-def macattack(append_string, mac):
-    return Sha1Hash(mac).update(bytes(append_string, 'utf-8')).hexdigest()
-
-print(macattack(", except for Zack", test_mac))
+# Print the resulting modified message and digest
+print("Message:")
+print(bytes(mod_msg))
+print()
+print("Message (hex):")
+for byte in mod_msg:
+      print(format(byte, 'x'), end='')
+print()
+print()
+print("Digest:")
+print(mod_mac)

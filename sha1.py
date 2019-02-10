@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# Original code from https://github.com/ajalt/python-sha1
 
 from __future__ import print_function
 import struct
